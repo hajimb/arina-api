@@ -1,0 +1,286 @@
+<?php
+defined('BASEPATH') or exit('No direct script access allowed');
+
+require_once APPPATH . 'libraries/REST_Controller.php';
+
+class Order extends REST_Controller{
+
+    public function __construct(){
+        parent::__construct();
+        header("Access-Control-Allow-Origin: * ");
+        header("Access-Control-Allow-Headers: X-API-KEY, Origin, X-Requested-With, Content-Type, Accept, Access-Control-Request-Method");
+        header("Access-Control-Allow-Methods: GET, POST, OPTIONS, PUT, DELETE");
+        $this->output->set_header('Cache-Control: no-store, no-cache, must-revalidate, post-check=0,pre-check=0');
+        $this->output->set_header('Pragma: no-cache');
+        $this->load->model('Order_model' ,'order');
+        $this->load->library('Authorization_Token','authorization_token');
+        $this->load->library('user_agent');
+    }
+
+    /*
+    1.  HTTP_OK
+    2.  HTTP_BAD_REQUEST
+    2.  HTTP_NOT_FOUND
+    */
+
+    
+
+    public function create_post(){
+        $verror         = array();
+        $master_order  = array();
+        $header     = $this->input->request_headers();
+        
+        
+        // $explode    = explode(';', $header['Cookie']);
+        // $lan        = explode('=', $explode[2]);
+        // $language   = $lan[1];
+        
+        
+        
+        $language   = 'en-US,en;q=0.9';
+        
+        $post_data  = json_decode(file_get_contents("php://input"), true);
+        // print_r($post_data);
+        $this->form_validation->set_data($post_data);
+        $account      = $post_data['account'];
+        $hasShipping  = $post_data['hasShipping'] && 0;
+        $payment_method  = $post_data['payment_method'] ;
+        $this->form_validation->set_rules('account', 'account', 'required|trim');
+        
+        $customer_id = 0;
+        $master_order['user_agent']            = $header['User-Agent'];
+        $master_order['accept_language']       = $language;
+        $master_order['date_added']            = currDate();
+        $master_order['date_modified']         = currDate();
+        $master_order['affiliate_id']          = '0';
+        $master_order['commission']            = '0';
+        $master_order['marketing_id']          = '0';
+        $master_order['tracking']              = '';
+        $master_order['language_id']           = LANGUAGE_ID;
+        $master_order['currency_id']           = CURRENCY_ID;
+        $master_order['currency_code']         = CURRENCY_CODE;
+        $master_order['currency_value']        = CURRENCY_VALUE;
+        $master_order['customer_group_id']     = CUSTOMER_GROUP_ID;
+        $master_order['store_id']              = STORE_ID;
+        $master_order['store_name']            = STORE_NAME;
+        $master_order['store_url']              = STORE_URL;
+        $master_order['ip']                     = $this->input->ip_address();
+        $master_order['forwarded_ip']           = $this->input->ip_address();
+        $master_order['invoice_prefix']         = 'INV-2021-00';
+        $master_order['custom_field']           = '[]';
+        $master_order['payment_custom_field']   = $post_data['payment_custom_field'];
+        $master_order['shipping_custom_field']  = '[]';
+        $master_order['shipping_code']          = 'flat.flat';
+        $master_order['payment_address_format'] = '';
+        $master_order['payment_company'] = '';
+        $master_order['shipping_company'] = '';
+        $master_order['shipping_address_format'] ='';
+        $master_order['shipping_method'] = 'Flat Shipping';
+        $master_order['shipping_code'] = 'flat.shipping_code';
+        $master_order['payment_address_format'] ='';
+        $master_order['payment_method'] = $post_data['payment_method'];
+        $master_order['payment_code']   = $post_data['payment_code'];
+        $master_order['order_from']     = "app";
+        
+        // print_r($master_order);
+        if (array_key_exists("Authorization", $header)) {
+            $token   = $this->authorization_token->validateToken();
+            if($token['status']){
+                $userData    = $token['data'];
+                $customer_id = $userData->id;
+            }else{
+                $this->response( [
+                    'status'   => FALSE,
+                    'validate' => TRUE,
+                    'message'  => 'User '.$token['message'],
+                ], 200 );
+            }
+        } else {
+            $customer_id = 0;
+            if($account == 'guest'){
+                $this->form_validation->set_rules('firstname', 'firstname', 'required|trim');
+                $this->form_validation->set_rules('lastname', 'lastname', 'required|trim');
+                $this->form_validation->set_rules('email', 'email', 'required|valid_email|trim');
+                $this->form_validation->set_rules('telephone', 'telephone', 'required|trim');
+                $this->form_validation->set_rules('address_1', 'address_1', 'required|trim');
+                $this->form_validation->set_rules('city', 'city', 'required|trim');
+                $this->form_validation->set_rules('country_id', 'country_id', 'required|numeric|trim');
+                $this->form_validation->set_rules('zone_id', 'zone_id', 'required|numeric|trim');
+            }
+        }
+
+        if($payment_method != 'cod'){
+            $this->form_validation->set_rules('zone_id', 'zone_id', 'required|numeric|trim');
+        }
+        
+        // New Fields
+        
+        // name
+        // telephone
+        // governate_id
+        // block
+        // street
+        // building
+        // floor
+        // flat
+        // paci
+        
+        // address_note
+        // shipping_name
+        // shipping_governate_id
+        // shipping_block
+        // shipping_street
+        // shipping_building
+        // shipping_floor
+        // shipping_flat
+        // shipping_paci
+
+        if($hasShipping==1){
+            $this->form_validation->set_rules('shipping_firstname', 'firstname', 'required|trim');
+            $this->form_validation->set_rules('shipping_lastname', 'lastname', 'required|trim');
+            $this->form_validation->set_rules('shipping_address_1', 'address_1', 'required|trim');
+            $this->form_validation->set_rules('shipping_city', 'city', 'required|trim');
+            $this->form_validation->set_rules('shipping_country_id', 'country_id', 'required|numeric|trim');
+            $this->form_validation->set_rules('shipping_zone_id', 'zone_id', 'required|numeric|trim');
+            $master_order['shipping_firstname'] = $post_data['shipping_firstname'];
+            $master_order['shipping_lastname'] = $post_data['shipping_lastname'];
+            $master_order['shipping_address_1'] = $post_data['shipping_address_1'];
+            $master_order['shipping_address_2'] = $post_data['shipping_address_2'];
+            $master_order['shipping_city'] = $post_data['shipping_city'];
+            $master_order['shipping_postcode'] = $post_data['shipping_postcode'];
+            $master_order['shipping_country'] = getcountry($post_data['shipping_country_id']);
+            $master_order['shipping_country_id'] = $post_data['shipping_country_id'];
+            $master_order['shipping_zone'] = getzone($post_data['shipping_zone_id']);
+            $master_order['shipping_zone_id'] = $post_data['shipping_zone_id'];
+        }else{
+            $master_order['payment_firstname'] = $post_data['firstname'];
+            $master_order['payment_lastname'] = $post_data['lastname'];
+            $master_order['payment_address_1'] = $post_data['address_1'];
+            $master_order['payment_address_2'] = (isset($post_data['address_2']) ? $post_data['address_2'] : '');
+            $master_order['payment_city'] = $post_data['city'];
+            $master_order['payment_postcode'] = $post_data['postcode'];
+            $master_order['payment_country'] = getcountry($post_data['country_id']);
+            $master_order['payment_country_id'] = $post_data['country_id'];
+            $master_order['payment_zone'] =  getzone($post_data['zone_id']);
+            $master_order['payment_zone_id'] = $post_data['zone_id'];
+            $master_order['shipping_firstname'] = $post_data['firstname'];
+            $master_order['shipping_lastname'] = $post_data['lastname'];
+            $master_order['shipping_address_1'] = $post_data['address_1'];
+            $master_order['shipping_address_2'] = (isset($post_data['address_2']) ? $post_data['address_2'] : '');
+            $master_order['shipping_city'] = $post_data['city'];
+            $master_order['shipping_postcode'] = $post_data['postcode'];
+            $master_order['shipping_country'] = getcountry($post_data['country_id']);
+            $master_order['shipping_country_id'] = $post_data['country_id'];
+            $master_order['shipping_zone'] = getzone($post_data['zone_id']);
+            $master_order['shipping_zone_id'] = $post_data['zone_id'];
+            
+        }
+        // print_r($master_order);
+
+        if ($this->form_validation->run()) {
+            $master_order['customer_id'] = $customer_id;
+            $master_order['firstname'] = $post_data['firstname'];
+            $master_order['lastname'] = $post_data['lastname'];
+            $master_order['email'] = $post_data['email'];
+            $master_order['telephone'] = $post_data['telephone'];
+            $master_order['comment'] = $post_data['comment'];
+            $master_order['total'] = $post_data['total'];
+            $products = $post_data['products'];
+            // print_r($products);exit;
+            // print_r($master_order);exit;
+            $result      = $this->order->create($master_order, $products);
+            $this->response( [
+                'status'   => TRUE,
+                'validate' => TRUE,
+                'message'  => $result['msg'],
+            ], 200 );
+        }else{
+            foreach ($post_data as $key => $value) {
+                $verror[$key] = form_error($key);
+            }
+            $this->response( [
+                'status'   => FALSE,
+                'validate' => FALSE,
+                'message'  => $verror,
+            ], 200 );
+        }
+    }
+
+    public function index_get(){
+        $verror  = array();
+        $token = $this->authorization_token->validateToken();
+        if($token['status']){
+            $userData = $token['data'];
+            $customer_id = $userData->id;
+            $result = $this->order->getOrder($customer_id);
+            $this->response( [
+                'status'   => TRUE,
+                'validate' => TRUE,
+                'message'  => $result,
+            ], 200 );
+        }else{
+            $this->response( [
+                'status'   => FALSE,
+                'validate' => TRUE,
+                'message'  => 'User '.$token['message'],
+            ], 200 );
+        }
+    }
+
+    public function detail_post(){
+        $verror  = array();
+        $post_data = json_decode(file_get_contents("php://input"), true);
+        // print_r($post_data);
+        $token = $this->authorization_token->validateToken();
+        if($token['status']){
+            $userData = $token['data'];
+            $customer_id = $userData->id;
+            // $this->_apiConfig(['methods' => ['POST']]); 
+            $this->form_validation->set_data($post_data);
+            $this->form_validation->set_rules('order_id', 'Order Id', 'required|numeric|trim');
+            $this->form_validation->set_error_delimiters('', '');
+            $this->form_validation->set_message('required', 'Enter %s');
+
+            if ($this->form_validation->run()) {
+                $order_id = $post_data['order_id'];
+
+                $condition = array(
+                    'order_id' => $order_id,
+                    'customer_id' => $customer_id
+                );
+                $result['orderDetail']   = $this->order->getOrderById($condition);
+                $result['orderProducts'] = $this->order->getOrderProducts($order_id);
+                $result['orderHistory'] = $this->order->getOrderHistory($order_id);
+                if(count($result['orderDetail']) >0){
+                    $this->response( [
+                        'status'   => TRUE,
+                        'validate' => TRUE,
+                        'message'  => $result
+                    ], 200 );
+                }else{
+                    $this->response( [
+                        'status'   => FALSE,
+                        'validate' => TRUE,
+                        'message'  => 'Invalid Order Id'
+                    ], 200 );
+                }
+               
+            } else {
+                foreach ($post_data as $key => $value) {
+                    $verror[$key] = form_error($key);
+                }
+                $this->response( [
+                    'status'   => FALSE,
+                    'validate' => FALSE,
+                    'message'  => $verror,
+                ], 200 );
+            }
+        }else{
+            $this->response( [
+                'status'   => FALSE,
+                'validate' => TRUE,
+                'message'  => 'User '.$token['message'],
+            ], 200 );
+        }
+    }
+}

@@ -1,0 +1,22 @@
+{
+  "english": [
+    {
+      "Accessories": "Accessories",
+      "Colored Lenses": "Colored Lenses",
+      "Eyes": "Eyes",
+      "Makeup": "Makeup",
+      "Medicated Lenses": "Medicated Lenses",
+      "Nails": "Nails"
+    }
+  ],
+  "arabic": [
+    {
+      "Accessories": "مستلزمات",
+      "Colored Lenses": "عدسات ملونة",
+      "Eyes": "عيون",
+      "Makeup": "ميك أب",
+      "Medicated Lenses": "عدسات طبية",
+      "Nails": "الأظافر"
+    }
+  ]
+}

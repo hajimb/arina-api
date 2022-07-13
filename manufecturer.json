@@ -1,0 +1,16 @@
+{
+	"english": [{
+		"Skin Care": "Skin Care",
+		"HAIR CARE": "HAIR CARE",
+		"HEALTH CARE": "HEALTH CARE",
+		"Slimming Shorts": "Slimming Shorts",
+		"Perfume": "Perfume"
+	}],
+	"arabic": [{
+		"Skin Care": "العناية بالبشرة",
+		"HAIR CARE": "عدالعناية بالشعر",
+		"HEALTH CARE": "الرعاية الصحية",
+		"Slimming Shorts": "شورت التنحيف",
+		"Perfume": "عطور "
+	}]
+}
